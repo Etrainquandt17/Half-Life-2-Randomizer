@@ -1,0 +1,2 @@
+hl2_d2_coast_10.ent
+hl2_d3_c17_07.ent

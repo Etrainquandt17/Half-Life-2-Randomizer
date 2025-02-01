@@ -1,0 +1,8 @@
+hl2_d1_town_05.ent 
+hl2_d2_coast_10.ent
+hl2_d2_prison_03.ent
+hl2_d2_prison_06.ent
+hl2_d2_prison_07.ent
+hl2_d2_prison_08.ent
+hl2_d3_c17_11.ent
+hl2_d3_c17_13.ent

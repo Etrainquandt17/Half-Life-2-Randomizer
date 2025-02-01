@@ -1,0 +1,10 @@
+npc_alyx
+npc_antlionguard
+npc_barney
+npc_breen
+npc_dog
+npc_eli
+npc_kleiner
+npc_monk
+npc_mossman
+npc_vortigaunt

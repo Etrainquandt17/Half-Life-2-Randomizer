@@ -1,0 +1,4 @@
+hl2_d2_coast_03.ent
+hl2_d2_coast_10.ent
+hl2_d2_prison_01.ent
+hl2_d3_c17_11.ent

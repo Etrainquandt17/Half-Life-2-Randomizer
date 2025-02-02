@@ -90,6 +90,8 @@ Thanks Source Engine we love you! You'll be stuck like that until you go through
 I really don't know what's happening here. It happens a lot and I cannot figure out how to fix it. If you know why please help out. For now, try to skip that map if you can.
 ### The cart takes a really time to arrive in Ravenholm
 I don't know why this happens or why where the cart takes you is visually unloaded. You can either wait a while for the cart or grenade jump to the other side.
+### Fixing models doesn't work sometimes
+I don't know why this happens, it's rare and only happens for like one model every randomization.
 ## Q&A
 ### Why does the battery and suit charger always fill up to full when removing max health cap and setting max armor to 750?
 x86 ASM is like that and required me to deleted the future instruction, which so happens to be the instructions that controls how much the battery should give. The suit charger was because there was no better option.

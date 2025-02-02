@@ -833,7 +833,10 @@ def remove_boards_and_vents(file_path):
         return
 
     with open(file_path, 'rb') as file:
-        content = file.read()
+        old_content = file.read()
+
+    old_length = len(old_content)
+    content = old_content
 
     # These are the props/entities to remove
     entity_names = [
@@ -870,8 +873,14 @@ def remove_boards_and_vents(file_path):
                     content = content[:prev_char+1] + b'\n' + content[next_char:]
                     log_print(f"Removed entity or prop block {entity_name.decode('utf-8')} from {file_path}")
 
+    new_length = len(content)
+    bytes_added = new_length - old_length
+
     with open(file_path, 'wb') as file:
         file.write(content)
+
+    if bytes_added != 0:
+        calculate_length_and_update(file_path, bytes_added)
 
 def main():
     print("Checking for d2_coast_02.bsp...")

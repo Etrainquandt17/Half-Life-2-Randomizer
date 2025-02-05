@@ -348,7 +348,7 @@ def randomize_file(file_path, replacements, check_next_line=False, important_npc
                     return match.group(0)
                     
             # Replace boards and vents with blank model
-            if original in ['"models/props_debris/wood_board01a.mdl"', '"models/props_debris/wood_board02a.mdl"', '"models/proprs_debris/wood_board03a.mdl"', '"models/props_debris/wood_board04a.mdl"', '"models/props_debris/wood_board05a.mdl"', '"models/props_debris/wood_board06a.mdl"', '"models/props_debris/wood_board07a.mdl"', '"models/props_junk/vent001.mdl"']:
+            if original in ['"models/props_debris/wood_board01a.mdl"', '"models/props_debris/wood_board02a.mdl"', '"models/props_debris/wood_board03a.mdl"', '"models/props_debris/wood_board04a.mdl"', '"models/props_debris/wood_board05a.mdl"', '"models/props_debris/wood_board06a.mdl"', '"models/props_debris/wood_board07a.mdl"', '"models/props_junk/vent001.mdl"']:
                 if os.path.basename(file_path).lower() == "d1_canals_03.bsp":
                     log_print(f"Skipping randomization for '{original}' in d1_canals_03.bsp because randomizing these props cause potential progression issues.")
                     return match.group(0)

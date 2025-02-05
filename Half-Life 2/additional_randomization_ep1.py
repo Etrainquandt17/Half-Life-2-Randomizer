@@ -3,40 +3,189 @@ import shutil
 import random
 import re
 
-def cleanup_scripts_directory():
-    """Cleans up hl2_complete/scripts directory by removing unwanted files"""
+from pathlib import Path
+
+def extract_vpk_stuff():
+    """Extracts data from EP1 VPK to new files"""
     
-    scripts_dir = Path("./hl2_complete/scripts")
+    vpk_path = Path("./episodic/ep1_pak_001.vpk")
+    output_dir = Path("./hl2_complete/scripts")
     
-    if not scripts_dir.exists():
-        print("hl2_complete/scripts directory not found, skipping cleanup")
-        return
-        
-    allowed_files = {
-        "weapon_smg1.txt",
-        "weapon_rpg.txt", 
-        "weapon_crossbow.txt",
-        "weapon_smg1.txt.backup",
-        "weapon_rpg.txt.backup",
-        "weapon_crossbow.txt.backup"
-    }
+    # Define extraction targets
+    extractions = [
+        {
+            "name": "game sounds weapons",
+            "output": output_dir / "game_sounds_weapons_episodic.txt",
+            "start": 0x4428969,
+            "end": 0x44293CA
+        },
+        {
+            "name": "level sounds aftermath",
+            "output": output_dir / "level_sounds_aftermath_episodic.txt", 
+            "start": 0x448EB04,
+            "end": 0x44964C6
+        },
+        {
+            "name": "level sounds c17_02a",
+            "output": output_dir / "level_sounds_c17_02a.txt", 
+            "start": 0x44964C7,
+            "end": 0x4496AEA
+        },
+        {
+            "name": "level sounds music",
+            "output": output_dir / "level_sounds_music_episodic.txt", 
+            "start": 0x4496AEB,
+            "end": 0x4497E4C
+        },
+        {
+            "name": "level sounds outland",
+            "output": output_dir / "level_sounds_outland_episodic.txt", 
+            "start": 0x4497E4D,
+            "end": 0x4498E06
+        },
+        {
+            "name": "level voices episode 01",
+            "output": output_dir / "level_voices_episode_01.txt", 
+            "start": 0x4498E07,
+            "end": 0x44ED292
+        },
+        {
+            "name": "level voices episode 02",
+            "output": output_dir / "level_voices_episode_02.txt", 
+            "start": 0x44ED293,
+            "end": 0x44EDC47
+        },
+        {
+            "name": "npc sounds advisor",
+            "output": output_dir / "npc_sounds_advisor.txt", 
+            "start": 0x44EDCBC,
+            "end": 0x44EF01C
+        },
+        {
+            "name": "npc sounds alyx",
+            "output": output_dir / "npc_sounds_alyx_episodic.txt", 
+            "start": 0x44EF01D,
+            "end": 0x450A1A6
+        },
+        {
+            "name": "npc sounds antlion",
+            "output": output_dir / "npc_sounds_antlion_episodic.txt", 
+            "start": 0x450A1A7,
+            "end": 0x450A8FF
+        },
+        {
+            "name": "npc sounds antlion guard",
+            "output": output_dir / "npc_sounds_antlionguard_episodic.txt", 
+            "start": 0x450A900,
+            "end": 0x450B17C
+        },
+        {
+            "name": "npc sounds citizen ep1",
+            "output": output_dir / "npc_sounds_citizen_ep1.txt", 
+            "start": 0x450B17D,
+            "end": 0x45172A8
+        },
+        {
+            "name": "npc sounds citizen episodic",
+            "output": output_dir / "npc_sounds_citizen_episodic.txt", 
+            "start": 0x45172A9,
+            "end": 0x451819F
+        },
+        {
+            "name": "npc sounds combine ball",
+            "output": output_dir / "npc_sounds_combine_ball_episodic.txt", 
+            "start": 0x45181A0,
+            "end": 0x451859A
+        },
+        {
+            "name": "npc sounds dog",
+            "output": output_dir / "npc_sounds_dog_episodic.txt", 
+            "start": 0x451859B,
+            "end": 0x451A94A
+        },
+        {
+            "name": "npc sounds ministrider",
+            "output": output_dir / "npc_sounds_ministrider_episodic.txt", 
+            "start": 0x451A94B,
+            "end": 0x451B7B3
+        },
+        {
+            "name": "npc sounds roller",
+            "output": output_dir / "npc_sounds_roller_episodic.txt", 
+            "start": 0x451B7B4,
+            "end": 0x451B894
+        },
+        {
+            "name": "npc sounds soldier",
+            "output": output_dir / "npc_sounds_soldier_episodic.txt", 
+            "start": 0x451B895,
+            "end": 0x451BCEE
+        },
+        {
+            "name": "npc sounds stalker",
+            "output": output_dir / "npc_sounds_stalker.txt", 
+            "start": 0x451BCEF,
+            "end": 0x451D6D4
+        },
+        {
+            "name": "npc sounds strider",
+            "output": output_dir / "npc_sounds_strider_episodic.txt", 
+            "start": 0x451D6D5,
+            "end": 0x451D99E
+        },
+        {
+            "name": "npc sounds turret",
+            "output": output_dir / "npc_sounds_turret_episodic.txt", 
+            "start": 0x451D99F,
+            "end": 0x451DA4E
+        },
+        {
+            "name": "npc sounds zombine",
+            "output": output_dir / "npc_sounds_zombine.txt", 
+            "start": 0x451DA4F,
+            "end": 0x451E384
+        },
+        {
+            "name": "weapon alyxgun",
+            "output": output_dir / "weapon_alyxgun.txt", 
+            "start": 0x455A963,
+            "end": 0x455AE99
+        }
+    ]
     
     try:
-        for file in scripts_dir.iterdir():
-            if file.name not in allowed_files:
-                file.unlink()
-                print(f"Deleted: {file.name}")
-                
-        print("Scripts directory cleanup complete")
+        if not vpk_path.exists():
+            raise FileNotFoundError("ep1_pak_001.vpk not found")
+            
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
         
+        # Extract each target
+        with open(vpk_path, 'rb') as vpk:
+            for extract in extractions:
+                num_bytes = extract["end"] - extract["start"] + 1
+                vpk.seek(extract["start"])
+                data = vpk.read(num_bytes)
+                
+                with open(extract["output"], 'wb') as f:
+                    f.write(data)
+                    
+                print(f"Successfully extracted {extract['name']} to {extract['output']}")
+            
+    except FileNotFoundError:
+        print("Error: ep1_pak_001.vpk not found")
+    except PermissionError:
+        print("Error: No permission to read/write files") 
     except Exception as e:
-        print(f"Error during cleanup: {str(e)}")
+        print(f"Error extracting sounds: {str(e)}")
 
 def restore_backups():
     """Restores all backup files to their original locations"""
     
     directories = [
         Path("./hl2/cfg"),
+        Path("./episodic/cfg"),
+        Path("./episodic/scripts"),
         Path("./hl2/scripts"),
         Path("./hl2_complete/scripts"),
         Path("./hl2_complete/bin")
@@ -82,53 +231,62 @@ def randomize_health_values():
         print("Health randomization cancelled.")
         return
     
-    cfg_path = Path("./hl2/cfg/skill.cfg")
-    backup_path = cfg_path.with_suffix('.cfg.backup')
+    cfg_paths = [
+        Path("./episodic/cfg/skill_episodic.cfg"),
+        Path("./hl2/cfg/skill.cfg")
+    ]
     excluded = ["vial", "kit", "charger", "increments"]
     
     try:
-        if not cfg_path.exists():
-            raise FileNotFoundError("skill.cfg not found")
+        # Check if any config exists
+        if not any(path.exists() for path in cfg_paths):
+            raise FileNotFoundError("No skill.cfg files found")
 
-        # Create backup if it doesn't exist
-        if not backup_path.exists():
-            shutil.copy2(cfg_path, backup_path)
-            print("Created backup of skill.cfg")
+        # Process each config file
+        for cfg_path in cfg_paths:
+            if not cfg_path.exists():
+                continue
 
-        # Get range from user
-        range_input = input("Enter health range (min-max) or press Enter for default 10-750: ").strip()
-        if range_input:
-            min_val, max_val = map(int, range_input.split('-'))
-        else:
-            min_val, max_val = 10, 750
+            # Create backup if it doesn't exist
+            backup_path = cfg_path.with_suffix('.cfg.backup')
+            if not backup_path.exists():
+                shutil.copy2(cfg_path, backup_path)
+                print(f"Created backup of {cfg_path.name}")
 
-        # Read and process file
-        with open(cfg_path, 'r') as f:
-            lines = f.readlines()
+            # Get range from user (only once)
+            if 'min_val' not in locals():
+                range_input = input("Enter health range (min-max) or press Enter for default 10-750: ").strip()
+                if range_input:
+                    min_val, max_val = map(int, range_input.split('-'))
+                else:
+                    min_val, max_val = 10, 750
 
-        # Process lines
-        modified = []
-        for line in lines:
-            if "health" in line.lower() and not any(x in line.lower() for x in excluded):
-                # Extract number from quotes
-                match = re.search(r'"(\d+)"', line)
-                if match:
-                    old_val = match.group(1)
-                    new_val = random.randint(min_val, max_val)
-                    line = line.replace(f'"{old_val}"', f'"{new_val}"')
-                    print(f"Randomized health value for {line}: {old_val} -> {new_val}")
-            modified.append(line)
+            # Read and process file
+            with open(cfg_path, 'r') as f:
+                lines = f.readlines()
 
-        # Write back
-        with open(cfg_path, 'w') as f:
-            f.writelines(modified)
-            
-        print("Health values randomization complete!")
+            # Process lines
+            modified = []
+            for line in lines:
+                if "health" in line.lower() and not any(x in line.lower() for x in excluded):
+                    match = re.search(r'"(\d+)"', line)
+                    if match:
+                        old_val = match.group(1)
+                        new_val = random.randint(min_val, max_val)
+                        line = line.replace(f'"{old_val}"', f'"{new_val}"')
+                        print(f"Randomized health value in {cfg_path.name}: {old_val} -> {new_val}")
+                modified.append(line)
+
+            # Write back
+            with open(cfg_path, 'w') as f:
+                f.writelines(modified)
+                
+            print(f"Health values randomization complete for {cfg_path.name}!")
 
     except FileNotFoundError:
-        print("Error: skill.cfg not found")
+        print("Error: No skill.cfg files found")
     except PermissionError:
-        print("Error: No permission to modify/backup skill.cfg")
+        print("Error: No permission to modify/backup skill.cfg files")
     except ValueError:
         print("Error: Invalid range format. Use min-max (e.g. 10-750)")
     except Exception as e:
@@ -142,62 +300,70 @@ def randomize_damage_values():
         print("Damage randomization cancelled.")
         return
     
-    cfg_path = Path("./hl2/cfg/skill.cfg")
-    backup_path = cfg_path.with_suffix('.cfg.backup')
+    cfg_paths = [
+        Path("./episodic/cfg/skill_episodic.cfg"),
+        Path("./hl2/cfg/skill.cfg")
+    ]
     excluded = ["scale"]
     damage_keywords = ["dmg", "shock", "kick", "damage"]
     
     try:
-        if not cfg_path.exists():
-            raise FileNotFoundError("skill.cfg not found")
+        # Check if any config exists
+        if not any(path.exists() for path in cfg_paths):
+            raise FileNotFoundError("No skill.cfg files found")
 
-        # Create backup if it doesn't exist
-        if not backup_path.exists():
-            shutil.copy2(cfg_path, backup_path)
-            print("Created backup of skill.cfg")
+        # Process each config file
+        for cfg_path in cfg_paths:
+            if not cfg_path.exists():
+                continue
 
-        # Get range from user
-        range_input = input("Enter damage range (min-max) or press Enter for default 2-150: ").strip()
-        if range_input:
-            min_val, max_val = map(int, range_input.split('-'))
-        else:
-            min_val, max_val = 2, 150
+            # Create backup if it doesn't exist
+            backup_path = cfg_path.with_suffix('.cfg.backup')
+            if not backup_path.exists():
+                shutil.copy2(cfg_path, backup_path)
+                print(f"Created backup of {cfg_path.name}")
 
-        # Read and process file
-        with open(cfg_path, 'r') as f:
-            lines = f.readlines()
-
-        # Process lines
-        modified = []
-        for line in lines:
-            if any(keyword in line.lower() for keyword in damage_keywords) and not any(x in line.lower() for x in excluded):
-                if "strider" in line.lower():
-                    # Extract number without quotes for strider
-                    match = re.search(r'\s(\d+)\s*$', line)
+            # Get range from user (only once)
+            if 'min_val' not in locals():
+                range_input = input("Enter damage range (min-max) or press Enter for default 2-150: ").strip()
+                if range_input:
+                    min_val, max_val = map(int, range_input.split('-'))
                 else:
-                    # Extract number from quotes for others
-                    match = re.search(r'"(\d+)"', line)
-                
-                if match:
-                    old_val = match.group(1)
-                    new_val = random.randint(min_val, max_val)
-                    if "strider" in line.lower():
-                        line = re.sub(r'\s\d+\s*$', f' {new_val}\n', line)
-                    else:
-                        line = line.replace(f'"{old_val}"', f'"{new_val}"')
-                    print(f"Randomized damage value for {line.strip()}: {old_val} -> {new_val}")
-            modified.append(line)
+                    min_val, max_val = 2, 150
 
-        # Write back
-        with open(cfg_path, 'w') as f:
-            f.writelines(modified)
-            
-        print("Damage values randomization complete!")
+            # Read and process file
+            with open(cfg_path, 'r') as f:
+                lines = f.readlines()
+
+            # Process lines
+            modified = []
+            for line in lines:
+                if any(keyword in line.lower() for keyword in damage_keywords) and not any(x in line.lower() for x in excluded):
+                    if "strider" in line.lower():
+                        match = re.search(r'\s(\d+)\s*$', line)
+                    else:
+                        match = re.search(r'"(\d+)"', line)
+                    
+                    if match:
+                        old_val = match.group(1)
+                        new_val = random.randint(min_val, max_val)
+                        if "strider" in line.lower():
+                            line = re.sub(r'\s\d+\s*$', f' {new_val}\n', line)
+                        else:
+                            line = line.replace(f'"{old_val}"', f'"{new_val}"')
+                        print(f"Randomized damage value in {cfg_path.name}: {old_val} -> {new_val}")
+                modified.append(line)
+
+            # Write back
+            with open(cfg_path, 'w') as f:
+                f.writelines(modified)
+                
+            print(f"Damage values randomization complete for {cfg_path.name}!")
 
     except FileNotFoundError:
-        print("Error: skill.cfg not found")
+        print("Error: No skill.cfg files found")
     except PermissionError:
-        print("Error: No permission to modify/backup skill.cfg")
+        print("Error: No permission to modify/backup skill.cfg files")
     except ValueError:
         print("Error: Invalid range format. Use min-max (e.g. 2-150)")
     except Exception as e:
@@ -211,54 +377,61 @@ def randomize_max_ammo():
         print("Ammo randomization cancelled.")
         return
     
-    cfg_path = Path("./hl2/cfg/skill.cfg")
-    backup_path = cfg_path.with_suffix('.cfg.backup')
+    cfg_paths = [
+        Path("./episodic/cfg/skill_episodic.cfg"),
+        Path("./hl2/cfg/skill.cfg")
+    ]
     excluded = ["armor"]
     ammo_keywords = ["max"]
     
     try:
-        if not cfg_path.exists():
-            raise FileNotFoundError("skill.cfg not found")
+        if not any(path.exists() for path in cfg_paths):
+            raise FileNotFoundError("No skill.cfg files found")
 
-        # Create backup if it doesn't exist
-        if not backup_path.exists():
-            shutil.copy2(cfg_path, backup_path)
-            print("Created backup of skill.cfg")
-
-        # Get range from user
+        # Get range from user (only once)
         range_input = input("Enter max ammo range (min-max) or press Enter for default 3-255: ").strip()
         if range_input:
             min_val, max_val = map(int, range_input.split('-'))
         else:
             min_val, max_val = 3, 255
 
-        # Read and process file
-        with open(cfg_path, 'r') as f:
-            lines = f.readlines()
+        # Process each config file
+        for cfg_path in cfg_paths:
+            if not cfg_path.exists():
+                continue
+                
+            # Create backup if it doesn't exist
+            backup_path = cfg_path.with_suffix('.cfg.backup')
+            if not backup_path.exists():
+                shutil.copy2(cfg_path, backup_path)
+                print(f"Created backup of {cfg_path.name}")
 
-        # Process lines
-        modified = []
-        for line in lines:
-            if any(keyword in line.lower() for keyword in ammo_keywords) and not any(x in line.lower() for x in excluded):
-                # Extract number from quotes
-                match = re.search(r'"(\d+)"', line)
-                if match:
-                    old_val = match.group(1)
-                    new_val = random.randint(min_val, max_val)
-                    line = line.replace(f'"{old_val}"', f'"{new_val}"')
-                    print(f"Randomized max ammo value for {line}: {old_val} -> {new_val}")
-            modified.append(line)
+            # Read and process file
+            with open(cfg_path, 'r') as f:
+                lines = f.readlines()
 
-        # Write back
-        with open(cfg_path, 'w') as f:
-            f.writelines(modified)
-            
-        print("Max ammo randomization complete!")
+            # Process lines
+            modified = []
+            for line in lines:
+                if any(keyword in line.lower() for keyword in ammo_keywords) and not any(x in line.lower() for x in excluded):
+                    match = re.search(r'"(\d+)"', line)
+                    if match:
+                        old_val = match.group(1)
+                        new_val = random.randint(min_val, max_val)
+                        line = line.replace(f'"{old_val}"', f'"{new_val}"')
+                        print(f"Randomized max ammo value in {cfg_path.name}: {old_val} -> {new_val}")
+                modified.append(line)
+
+            # Write back
+            with open(cfg_path, 'w') as f:
+                f.writelines(modified)
+                
+            print(f"Max ammo randomization complete for {cfg_path.name}!")
 
     except FileNotFoundError:
-        print("Error: skill.cfg not found")
+        print("Error: No skill.cfg files found")
     except PermissionError:
-        print("Error: No permission to modify/backup skill.cfg")
+        print("Error: No permission to modify/backup skill.cfg files")
     except ValueError:
         print("Error: Invalid range format. Use min-max (e.g. 3-255)")
     except Exception as e:
@@ -272,53 +445,62 @@ def randomize_chargers_and_pickups():
         print("Charger and pickup randomization cancelled.")
         return
     
-    cfg_path = Path("./hl2/cfg/skill.cfg")
-    backup_path = cfg_path.with_suffix('.cfg.backup')
+    cfg_paths = [
+        Path("./episodic/cfg/skill_episodic.cfg"),
+        Path("./hl2/cfg/skill.cfg")
+    ]
     keywords = ["battery", "charger", "kit", "vial"]
     
     try:
-        if not cfg_path.exists():
-            raise FileNotFoundError("skill.cfg not found")
+        # Check if any config exists
+        if not any(path.exists() for path in cfg_paths):
+            raise FileNotFoundError("No skill.cfg files found")
 
-        # Create backup if it doesn't exist
-        if not backup_path.exists():
-            shutil.copy2(cfg_path, backup_path)
-            print("Created backup of skill.cfg")
+        # Get range from user (only once)
+        if 'min_val' not in locals():
+            range_input = input("Enter charger and pickup range (min-max) or press Enter for default 15-500: ").strip()
+            if range_input:
+                min_val, max_val = map(int, range_input.split('-'))
+            else:
+                min_val, max_val = 15, 500
 
-        # Get range from user
-        range_input = input("Enter charger and pickup range (min-max) or press Enter for default 15-500: ").strip()
-        if range_input:
-            min_val, max_val = map(int, range_input.split('-'))
-        else:
-            min_val, max_val = 15, 500
+        # Process each config file
+        for cfg_path in cfg_paths:
+            if not cfg_path.exists():
+                continue
 
-        # Read and process file
-        with open(cfg_path, 'r') as f:
-            lines = f.readlines()
+            # Create backup if it doesn't exist
+            backup_path = cfg_path.with_suffix('.cfg.backup')
+            if not backup_path.exists():
+                shutil.copy2(cfg_path, backup_path)
+                print(f"Created backup of {cfg_path.name}")
 
-        # Process lines
-        modified = []
-        for line in lines:
-            if any(keyword in line.lower() for keyword in keywords):
-                # Extract number from quotes
-                match = re.search(r'"(\d+)"', line)
-                if match:
-                    old_val = match.group(1)
-                    new_val = random.randint(min_val, max_val)
-                    line = line.replace(f'"{old_val}"', f'"{new_val}"')
-                    print(f"Randomized charger and pickup value for {line}: {old_val} -> {new_val}")
-            modified.append(line)
+            # Read and process file
+            with open(cfg_path, 'r') as f:
+                lines = f.readlines()
 
-        # Write back
-        with open(cfg_path, 'w') as f:
-            f.writelines(modified)
-            
-        print("Charger and pickup randomization complete!")
+            # Process lines
+            modified = []
+            for line in lines:
+                if any(keyword in line.lower() for keyword in keywords):
+                    match = re.search(r'"(\d+)"', line)
+                    if match:
+                        old_val = match.group(1)
+                        new_val = random.randint(min_val, max_val)
+                        line = line.replace(f'"{old_val}"', f'"{new_val}"')
+                        print(f"Randomized charger and pickup value in {cfg_path.name}: {old_val} -> {new_val}")
+                modified.append(line)
+
+            # Write back
+            with open(cfg_path, 'w') as f:
+                f.writelines(modified)
+                
+            print(f"Charger and pickup randomization complete for {cfg_path.name}!")
 
     except FileNotFoundError:
-        print("Error: skill.cfg not found")
+        print("Error: No skill.cfg files found")
     except PermissionError:
-        print("Error: No permission to modify/backup skill.cfg")
+        print("Error: No permission to modify/backup skill.cfg files")
     except ValueError:
         print("Error: Invalid range format. Use min-max (e.g. 15-500)")
     except Exception as e:
@@ -332,54 +514,60 @@ def randomize_damage_adjusters():
         print("Damage adjuster randomization cancelled.")
         return
     
-    cfg_path = Path("./hl2/cfg/skill.cfg")
-    backup_path = cfg_path.with_suffix('.cfg.backup')
+    cfg_paths = [
+        Path("./episodic/cfg/skill_episodic.cfg"),
+        Path("./hl2/cfg/skill.cfg")
+    ]
     body_parts = ["head", "chest", "stomach", "arm", "leg"]
     
     try:
-        if not cfg_path.exists():
-            raise FileNotFoundError("skill.cfg not found")
+        if not any(path.exists() for path in cfg_paths):
+            raise FileNotFoundError("No skill.cfg files found")
 
-        # Create backup if it doesn't exist
-        if not backup_path.exists():
-            shutil.copy2(cfg_path, backup_path)
-            print("Created backup of skill.cfg")
-
-        # Get range from user
+        # Get range from user (only once)
         range_input = input("Enter damage adjuster range (min-max) or press Enter for default 0-3: ").strip()
         if range_input:
             min_val, max_val = map(float, range_input.split('-'))
         else:
             min_val, max_val = 0.0, 3.0
 
-        # Read and process file
-        with open(cfg_path, 'r') as f:
-            lines = f.readlines()
+        # Process each config file
+        for cfg_path in cfg_paths:
+            if not cfg_path.exists():
+                continue
 
-        # Process lines
-        modified = []
-        for line in lines:
-            # Match words with optional underscores
-            if any(re.search(rf'(^|[\s_]){part}([\s_]|$)', line.lower()) for part in body_parts):
-                # Extract float number from quotes
-                match = re.search(r'"([\d.]+)"', line)
-                if match:
-                    old_val = match.group(1)
-                    new_val = round(random.uniform(min_val, max_val), 1)
-                    line = line.replace(f'"{old_val}"', f'"{new_val}"')
-                    print(f"Randomized damage adjuster for {line.strip()}: {old_val} -> {new_val}")
-            modified.append(line)
+            # Create backup if it doesn't exist
+            backup_path = cfg_path.with_suffix('.cfg.backup')
+            if not backup_path.exists():
+                shutil.copy2(cfg_path, backup_path)
+                print(f"Created backup of {cfg_path.name}")
 
-        # Write back
-        with open(cfg_path, 'w') as f:
-            f.writelines(modified)
-            
-        print("Damage adjuster randomization complete!")
+            # Read and process file
+            with open(cfg_path, 'r') as f:
+                lines = f.readlines()
+
+            # Process lines
+            modified = []
+            for line in lines:
+                if any(re.search(rf'(^|[\s_]){part}([\s_]|$)', line.lower()) for part in body_parts):
+                    match = re.search(r'"([\d.]+)"', line)
+                    if match:
+                        old_val = match.group(1)
+                        new_val = round(random.uniform(min_val, max_val), 1)
+                        line = line.replace(f'"{old_val}"', f'"{new_val}"')
+                        print(f"Randomized damage adjuster in {cfg_path.name}: {old_val} -> {new_val}")
+                modified.append(line)
+
+            # Write back
+            with open(cfg_path, 'w') as f:
+                f.writelines(modified)
+                
+            print(f"Damage adjuster randomization complete for {cfg_path.name}!")
 
     except FileNotFoundError:
-        print("Error: skill.cfg not found")
+        print("Error: No skill.cfg files found")
     except PermissionError:
-        print("Error: No permission to modify/backup skill.cfg")
+        print("Error: No permission to modify/backup skill.cfg files")
     except ValueError:
         print("Error: Invalid range format. Use min-max (e.g. 0-3)")
     except Exception as e:
@@ -398,7 +586,7 @@ def randomize_weapon_clips():
     target_dir.mkdir(parents=True, exist_ok=True)
     
     # Files to copy and modify in new directory
-    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt"]
+    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt", "weapon_annabelle.txt", "weapon_alyxgun.txt"]
     
     try:
         # Get range from user
@@ -516,7 +704,7 @@ def shuffle_ammo_types():
     target_dir = Path("./hl2_complete/scripts")
     target_dir.mkdir(parents=True, exist_ok=True)
     
-    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt"]
+    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt", "weapon_annabelle.txt", "weapon_alyxgun.txt"]
     
     ammo_types = [
         "357", "AlyxGun", "AR2", "AR2AltFire", "XBowBolt",
@@ -618,8 +806,8 @@ def randomize_weapon_sounds():
     source_dir = Path("./hl2/scripts")
     target_dir = Path("./hl2_complete/scripts")
     target_dir.mkdir(parents=True, exist_ok=True)
-    sounds_file = Path("./weaponsounds.txt")
-    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt"]
+    sounds_file = Path("./weaponsounds_ep1.txt")
+    weapon_files = ["weapon_smg1.txt", "weapon_rpg.txt", "weapon_crossbow.txt", "weapon_annabelle.txt", "weapon_alyxgun.txt"]
 
     if not sounds_file.exists():
         print("Error: weaponsounds.txt not found")
@@ -1104,14 +1292,18 @@ def randomize_other_sounds():
         return
 
     # Paths setup
-    sounds_file = Path("./hl2/maps/sounds&music.txt")
-    scripts_dir = Path("./hl2/scripts")
+    sounds_file = Path("./hl2_complete/maps/sounds&music.txt")
+    script_dirs = [
+        Path("./hl2/scripts"),
+        Path("./hl2_complete/scripts")
+    ]
     sound_files = []
     
-    # Gather all relevant sound files
+    # Gather all relevant sound files from both directories
     patterns = ["npc_sounds*.txt", "level_sounds*.txt", "game_sounds*.txt"]
-    for pattern in patterns:
-        sound_files.extend(scripts_dir.glob(pattern))
+    for script_dir in script_dirs:
+        for pattern in patterns:
+            sound_files.extend(script_dir.glob(pattern))
     
     if not sound_files:
         print("No sound script files found")
@@ -1224,7 +1416,7 @@ def fix_alyxgun_viewmodel():
     elif user_choice == 'y':
         print("Fixing Alyx gun viewmodel...")
     
-    weapon_file = Path("./hl2/scripts/weapon_alyxgun.txt")
+    weapon_file = Path("./hl2_complete/scripts/weapon_alyxgun.txt")
     backup_path = weapon_file.with_suffix('.txt.backup')
     
     try:
@@ -1325,8 +1517,8 @@ def randomize_drops():
         return
 
     server_dll_path = Path("./hl2_complete/bin/server.dll")
-    asm_file = Path("./asm_ents.txt")
-    asm_models_file = Path("./asm_npc_models.txt")
+    asm_file = Path("./asm_ents_ep1.txt")
+    asm_models_file = Path("./asm_npc_models_ep1.txt")
     backup_path = server_dll_path.with_suffix('.dll.backup')
 
     # Offset pairs that must match
@@ -1626,7 +1818,7 @@ def remove_health_cap():
         print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    cleanup_scripts_directory()
+    extract_vpk_stuff()
     restore_backups()
     kill_vital_npcs()
     fix_alyxgun_viewmodel()

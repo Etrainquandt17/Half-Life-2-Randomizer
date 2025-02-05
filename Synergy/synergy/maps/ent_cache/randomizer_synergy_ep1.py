@@ -24,28 +24,21 @@ def read_important_npcs(file_path):
 def read_big_npcs():
     return {f'"{line.strip()}"' for line in read_lines("big_npcs.txt")}
 
-def read_concrete_models():
-    return {f'"{line.strip()}"' for line in read_lines("concrete.txt")}
-
 def should_process_file(filename):
-    """Check if file is an .ent file and has 'hl2' in the name"""
-    return filename.endswith('.ent') and 'hl2' in filename.lower()
+    """Check if file is an .ent file and has 'ep1' in the name"""
+    return filename.endswith('.ent') and 'ep1' in filename.lower()
 
 def read_npc_map_files():
     npc_files = [
-        "npc_antlion.txt",
-        "npc_citizen.txt",
-        "npc_combine_s.txt",
-        "npc_combinedropship.txt",
-        "npc_combinegunship.txt",
-        "npc_headcrab.txt",
-        "npc_manhack.txt",
-        "npc_metropolice.txt",
-        "npc_rollermine.txt",
-        "npc_sniper.txt",
-        "npc_strider.txt",
-        "npc_turret_floor.txt",
-        "npc_zombie.txt"
+        "npc_antlionguard.txt",
+        "npc_citizen_ep1.txt",
+        "npc_combine_s_ep1.txt",
+        "npc_combinegunship_ep1.txt",
+        "npc_rollermine_ep1.txt",
+        "npc_sniper_ep1.txt",
+        "npc_strider_ep1.txt",
+        "npc_stalker.txt",
+        "npc_zombine.txt"
     ]
     npc_map_dict = {}
     for npc_file in npc_files:
@@ -53,7 +46,7 @@ def read_npc_map_files():
         npc_map_dict[npc_name] = read_lines(npc_file)
     return npc_map_dict
 
-def randomize_file(file_path, replacements, check_next_line=False, important_npcs=None, npc_map_dict=None, npc_model_dict=None, is_weapon=False, prompt=None):
+def randomize_file(file_path, replacements, crossbow_check=False, important_npcs=None, npc_map_dict=None, npc_model_dict=None, prompt=None):
     with open(file_path, 'rb') as file:
         content = file.read()
 
@@ -77,14 +70,6 @@ def randomize_file(file_path, replacements, check_next_line=False, important_npc
                     start, end = match.span()
                     excluded_positions.update(range(start, end))
                     log_print(f"Detected troublesome map '{map_name}' for NPC '{npc}' at position {start}-{end}. Will skip randomization.")
-
-    # Handle stunstick special case
-    if is_weapon and os.path.basename(file_path) == "hl2_d1_trainstation_04.ent":
-        stunstick_pattern = re.compile(b'"weapon_stunstick"', re.IGNORECASE)
-        for match in stunstick_pattern.finditer(content):
-            start, end = match.span()
-            excluded_positions.update(range(start, end))
-            log_print(f"Found 'weapon_stunstick' in 'hl2_d1_trainstation_04.ent'. Will skip randomization as it's needed for progression.")
 
     # Create the combined pattern for replacements
     if replacements:
@@ -115,7 +100,7 @@ def randomize_file(file_path, replacements, check_next_line=False, important_npc
             replacement_bytes = replacement.encode('utf-8').strip()
 
             map_name = os.path.basename(file_path)
-            big_maps = set(read_lines("big_maps.txt"))
+            big_maps = set(read_lines("big_maps_ep1.txt"))
             big_npcs = read_big_npcs()
     
             if map_name in big_maps and replacement in big_npcs:
@@ -124,61 +109,18 @@ def randomize_file(file_path, replacements, check_next_line=False, important_npc
                     replacement = random.choice(replacements[original]).strip()
                     replacement_bytes = replacement.encode('utf-8').strip()
 
-            if check_next_line:
-                # Check the next line's text
-                next_line_start = content.find(b'\n', end) + 1
-                next_line_end = content.find(b'\n', next_line_start)
-                next_line = content[next_line_start:next_line_end]
-                log_print(f"Checking next line: {next_line}")
-
-                while replacement == '"weapon_crossbow"' and (b"npc" in next_line):
-                    log_print(f"Tried randomizing weapon_crossbow onto an NPC. Original weapon: '{original}' Position: {start}-{end} File: {file_path}")
-                    log_print(f"Retrying randomization for '{original}' as killing an NPC with a crossbow will crash the game.")
-                    replacement = random.choice(replacements[original]).strip()
-                    replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d1_canals_01a.ent" and "hl2_d1_canals_02.ent"
-            if os.path.basename(file_path) == "hl2_d1_canals_01a.ent" or os.path.basename(file_path) == "hl2_d1_canals_02.ent":
-                if replacement in ['"npc_combine_camera"', '"npc_rollermine"', '"npc_poisonzombie"', '"npc_fastzombie_torso"', '"npc_ichthyosaur"', '"npc_turret_ceiling"']:
-                    log_print(f"Retrying randomization for '{original}' at {start}-{end} in '{os.path.basename(file_path)}' because these npcs crash the game if a barnacle eats them and there are a lot of barnacles here.")
-                    while replacement in ['"npc_combine_camera"', '"npc_rollermine"', '"npc_poisonzombie"', '"npc_fastzombie_torso"', '"npc_ichthyosaur"', '"npc_turret_ceiling"']:
-                        replacement = random.choice(replacements[original]).strip()
-                        replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d2_prison_07.ent", "hl2_d2_prison_08.ent" and "hl2_d3_c17_11.ent"
-            if os.path.basename(file_path) == "hl2_d2_prison_07.ent" or os.path.basename(file_path) == "hl2_d2_prison_08.ent" or os.path.basename(file_path) == "hl2_d3_c17_11.ent":
-                if replacement in ['"weapon_357"', '"weapon_alyxgun"', '"weapon_bugbait"', '"weapon_frag"', '"weapon_physcannon"', '"weapon_crowbar"', '"weapon_stunstick"', '"weapon_crossbow"', '"weapon_pistol"', '"weapon_rpg"', '"weapon_pipe"', '"weapon_slam"', '"weapon_deagle"', '"weapon_mg1"', '"weapon_mp5k"']:
-                    log_print(f"Retrying randomization for '{original}' at {start}-{end} in '{os.path.basename(file_path)}' because these weapons prevent the combine soldiers from moving.")
-                    while replacement in ['"weapon_357"', '"weapon_alyxgun"', '"weapon_bugbait"', '"weapon_frag"', '"weapon_physcannon"', '"weapon_crowbar"', '"weapon_stunstick"', '"weapon_crossbow"', '"weapon_pistol"', '"weapon_rpg"', '"weapon_pipe"', '"weapon_slam"', '"weapon_deagle"', '"weapon_mg1"', '"weapon_mp5k"']:
-                        replacement = random.choice(replacements[original]).strip()
-                        replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d1_trainstation_06.ent"
-            if os.path.basename(file_path) == "hl2_d1_trainstation_06.ent" and original == '"weapon_crowbar"' and replacement in ['"weapon_bugbait"', '"weapon_pistol"', '"weapon_frag"', '"weapon_stunstick"']:
-                log_print(f"Tried randomizing 'weapon_crowbar' to '{replacement}' in 'hl2_d1_trainstation_06.ent'. Retrying with a different weapon as this weapon will cause you to not be able to continue.")
-                while replacement in ['"weapon_bugbait"', '"weapon_pistol"', '"weapon_frag"', '"weapon_stunstick"']:
-                    replacement = random.choice(replacements[original]).strip()
-                    replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d2_coast_05.ent"
-            if os.path.basename(file_path) == "hl2_d2_coast_05.ent" and replacement in ['"models/props_buildings/row_corner_1_fullscale.mdl"']:
-                log_print(f"Tried randomizing '{original}' to '{replacement}' in 'hl2_d2_coast_05.ent'. Retrying with a different prop as it will block your way.")
-                while replacement in ['"models/props_buildings/row_corner_1_fullscale.mdl"']:
-                    replacement = random.choice(replacements[original]).strip()
-                    replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d2_coast_07.ent"
-            if os.path.basename(file_path) == "hl2_d2_coast_07.ent" and replacement in ['"models/props_buildings/row_res_1_fullscale.mdl"']:
-                log_print(f"Tried randomizing '{original}' to '{replacement}' in 'hl2_d2_coast_07.ent'. Retrying with a different prop as it will block your way.")
-                while replacement in ['"models/props_buildings/row_res_1_fullscale.mdl"']:
-                    replacement = random.choice(replacements[original]).strip()
-                    replacement_bytes = replacement.encode('utf-8').strip()
-
-            # Check for "hl2_d3_breen_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d3_breen_01.ent" and original == '"weapon_physcannon"':
-                log_print(f"Skipping randomization for '{original}' in '{os.path.basename(file_path)}' because it's needed here.")
-                while original == '"weapon_physcannon"':
-                    return match.group(0)
+            if crossbow_check:
+                pos = match.start()
+                start_brace = content.rfind(b'{', 0, pos)
+                end_brace = content.find(b'}', pos)
+                if start_brace != -1 and end_brace != -1:
+                    block = content[start_brace:end_brace]
+                    if b"additionalequipment" in block.lower():
+                        while replacement == '"weapon_crossbow"':
+                            log_print(f"Tried randomizing weapon_crossbow for entity with additionalequipment. Original weapon: '{original}' Position: {start}-{end} File: {file_path}")
+                            log_print(f"Retrying randomization for '{original}' as killing an NPC with a crossbow will crash the game.")
+                            replacement = random.choice(replacements[original]).strip()
+                            replacement_bytes = replacement.encode('utf-8').strip()
 
             # Check for NPCType lines to avoid npc_grenade_frag
             if b"NPCType" in line and replacement == '"npc_grenade_frag"':
@@ -193,157 +135,87 @@ def randomize_file(file_path, replacements, check_next_line=False, important_npc
                 while replacement == '"npc_antlion"':
                     replacement = random.choice(replacements[original]).strip()
                     replacement_bytes = replacement.encode('utf-8').strip()
-                
-            # Check for "hl2_d1_trainstation_01.ent", "hl2_d3_c17_10a.ent" and "hl2_d1_trainstation_03.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_trainstation_01.ent" or os.path.basename(file_path).lower() == "hl2_d3_c17_10a.ent" or os.path.basename(file_path).lower() == "hl2_d1_trainstation_03.ent":
+
+            # Check for "ep1_ep1_citadel_01.ent" and "ep1_ep1_c17_00a.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_citadel_01.ent" or os.path.basename(file_path).lower() == "ep1_ep1_c17_00a.ent":
                 log_print(f"Skipping randomization for '{os.path.basename(file_path)}' because these maps are way too sensitive for any changes to allow progression.")
-                while os.path.basename(file_path).lower() == "hl2_d1_trainstation_01.ent" or os.path.basename(file_path).lower() == "hl2_d3_c17_10a.ent" or os.path.basename(file_path).lower() == "hl2_d1_trainstation_03.ent":
+                while os.path.basename(file_path).lower() == "ep1_ep1_citadel_01.ent" or os.path.basename(file_path).lower() == "ep1_ep1_c17_00a.ent":
                     return match.group(0)
                 
-            # Check for "hl2_d1_trainstation_04.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_trainstation_04.ent" and original in ['"models/props_lab/powerbox02b.mdl"', '"models/props_lab/pipesystem01a.mdl"', '"models/props_lab/pipesystem02a.mdl"', '"models/props_c17/door01_left.mdl"', '"models/props_lab/keypad.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_trainstation_04.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_lab/powerbox02b.mdl"', '"models/props_lab/pipesystem01a.mdl"', '"models/props_lab/pipesystem02a.mdl"', '"models/props_c17/door01_left.mdl"', '"models/props_lab/keypad.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d1_trainstation_05.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_trainstation_05.ent" and original in ['"models/props_interiors/vendingmachinesoda01a_door.mdl"', '"models/props_c17/door01_left.mdl"', '"models/props_lab/keypad.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_trainstation_05.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_interiors/vendingmachinesoda01a_door.mdl"', '"models/props_c17/door01_left.mdl"', '"models/props_lab/keypad.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d1_trainstation_06.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_trainstation_06.ent" and original in ['"models/props_c17/door01_left.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_trainstation_06.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/door01_left.mdl"']:
+            # Check for "ep1_ep1_citadel_04.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_citadel_04.ent" and original in ['"models/props_combine/stalkerpod_physanim.mdl"', '"models/props_combine/combine_hatch01.mdl"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_citadel_04.ent' because randomizing these props cause potential progression issues.")
+                while original in ['"models/props_combine/stalkerpod_physanim.mdl"', '"models/props_combine/combine_hatch01.mdl"']:
                     return match.group(0)
                 
-            # Check for "hl2_d1_canals_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_01.ent" and original in ['"models/props_trainstation/train001.mdl"', '"models/props_trainstation/train002.mdl"', '"models/props_trainstation/train003.mdl"', '"models/props_interiors/furniture_couch02a.mdl"', '"models/props_junk/metalbucket01a.mdl"', '"models/props_c17/furnituredrawer002a.mdl"', '"models/props_c17/tv_monitor01.mdl"', '"models/props_junk/meathook001a.mdl"', '"models/props_wasteland/light_spotlight02_lamp.mdl"', '"models/props_c17/furnituremattress001a.mdl"', '"models/props_junk/garbage_takeoutcarton001a.mdl"', '"models/props_junk/cardboard_box004a.mdl"', '"models/props_junk/metal_paintcan001a.mdl"', '"models/props_c17/chair_office01a.mdl"', '"models/props_junk/garbage_milkcarton002a.mdl"', '"models/props_canal/boxcar_door.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_c17/oildrum001_explosive.mdl"', '"models/props_c17/tv_monitor01_screen.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_01.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_trainstation/train001.mdl"', '"models/props_trainstation/train002.mdl"', '"models/props_trainstation/train003.mdl"', '"models/props_interiors/furniture_couch02a.mdl"', '"models/props_junk/metalbucket01a.mdl"', '"models/props_c17/furnituredrawer002a.mdl"', '"models/props_c17/tv_monitor01.mdl"', '"models/props_junk/meathook001a.mdl"', '"models/props_wasteland/light_spotlight02_lamp.mdl"', '"models/props_c17/furnituremattress001a.mdl"', '"models/props_junk/garbage_takeoutcarton001a.mdl"', '"models/props_junk/cardboard_box004a.mdl"', '"models/props_junk/metal_paintcan001a.mdl"', '"models/props_c17/chair_office01a.mdl"', '"models/props_junk/garbage_milkcarton002a.mdl"', '"models/props_canal/boxcar_door.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_c17/oildrum001_explosive.mdl"', '"models/props_c17/tv_monitor01_screen.mdl"']:
-                    return match.group(0)
-
-            # Remove wood pallets from "hl2_d1_canals_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_01.ent" and original in ['"models/props_junk/wood_pallet001a.mdl"']:
-                log_print(f"Replacing '{original}' with blank model to prevent progression issues.")
-                return match.group(0).replace(original.encode('utf-8'), b'"models/error.mdl"')
-                
-            # Check for "hl2_d1_canals_01a.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_01a.ent" and original in ['"models/props_c17/oildrum001_explosive.mdl"', '"models/props_canal/canal_bars002.mdl"', '"models/props_canal/canal_bars002b.mdl"', '"models/props_junk/cinderblock01a.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_01a.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/oildrum001_explosive.mdl"', '"models/props_canal/canal_bars002.mdl"', '"models/props_canal/canal_bars002b.mdl"', '"models/props_junk/cinderblock01a.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d1_canals_02.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_02.ent" and original in ['"models/props_junk/cinderblock01a.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_02.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_junk/cinderblock01a.mdl"']:
+            # Check for "ep1_ep1_c17_00.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_00.ent" and original in ['"models/props_c17/door03_left.mdl"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_c17_00.ent' because randomizing these props cause potential progression issues.")
+                while original in ['"models/props_c17/door03_left.mdl"']:
                     return match.group(0)
                 
-            # Check for "hl2_d1_canals_06.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_06.ent" and original in ['"models/props_borealis/bluebarrel002.mdl"', '"models/props_canal/canal_bars003.mdl"', '"models/props_c17/oildrum001.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_06.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_borealis/bluebarrel002.mdl"', '"models/props_canal/canal_bars003.mdl"', '"models/props_c17/oildrum001.mdl"']:
+            # Check for "ep1_ep1_c17_01.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_01.ent" and original in ['"weapon_frag"', '"models/props_debris/concrete_debris128Pile001a.mdl"', '"models/props_debris/rebar001c_64.mdl"', '"models/props_debris/concrete_section64Floor001b.mdl"', '"models/props_vehicles/car002a_physics.mdl"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_c17_01.ent' because randomizing these causes problems.")
+                while original in ['"weapon_frag"', '"models/props_debris/concrete_debris128Pile001a.mdl"', '"models/props_debris/rebar001c_64.mdl"', '"models/props_debris/concrete_section64Floor001b.mdl"', '"models/props_vehicles/car002a_physics.mdl"']:
                     return match.group(0)
                 
-            # Check for "hl2_d1_canals_11.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_11.ent" and original in ['"models/props_c17/furniturewashingmachine001a.mdl"', '"models/props_junk/cinderblock01a.mdl"', '"models/props_c17/furniturechair001a.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_vehicles/carparts_tire01a.mdl"', '"models/props_wasteland/tram_lever01.mdl"', '"models/props_wasteland/tram_leverbase01.mdl"', '"models/props_c17/metalladder002.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_11.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/furniturewashingmachine001a.mdl"', '"models/props_junk/cinderblock01a.mdl"', '"models/props_c17/furniturechair001a.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_vehicles/carparts_tire01a.mdl"', '"models/props_wasteland/tram_lever01.mdl"', '"models/props_wasteland/tram_leverbase01.mdl"', '"models/props_c17/metalladder002.mdl"']:
+            # Check for "ep1_ep1_c17_02.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_02.ent" and original in ['"models/props_vehicles/car005a_physics.mdl"', '"models/props_vehicles/car003a_physics.mdl"', '"models/props_vehicles/car003b_physics.mdl"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_c17_02.ent' because randomizing these causes problems.")
+                while original in ['"models/props_vehicles/car005a_physics.mdl"', '"models/props_vehicles/car003a_physics.mdl"', '"models/props_vehicles/car003b_physics.mdl"']:
                     return match.group(0)
                 
-            # Check for "hl2_d1_canals_12.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_canals_12.ent" and original in ['"models/props_c17/oildrum001_explosive.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_canals_12.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/oildrum001_explosive.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d1_eli_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_eli_01.ent" and original in ['"models/props_lab/blastdoor001a.mdl"', '"models/props_lab/blastdoor001b.mdl"', '"models/props_lab/blastdoor001c.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_eli_01.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_lab/blastdoor001a.mdl"', '"models/props_lab/blastdoor001b.mdl"', '"models/props_lab/blastdoor001c.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d1_eli_02.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_eli_02.ent" and original in ['"models/props_lab/dogobject_wood_crate001a_damagedmax.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_lab/blastdoor001a.mdl"', '"models/props_lab/blastdoor001b.mdl"', '"models/props_lab/blastdoor001c.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_eli_02.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_lab/dogobject_wood_crate001a_damagedmax.mdl"', '"models/props_c17/oildrum001.mdl"', '"models/props_lab/blastdoor001a.mdl"', '"models/props_lab/blastdoor001b.mdl"', '"models/props_lab/blastdoor001c.mdl"']:
+            # Check for "ep1_ep1_c17_02a.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_02a.ent" and original in ['"weapon_shotgun"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_c17_02a.ent' because Alyx not being able to pick up a shotgun will softlock the game.")
+                while original in ['"weapon_shotgun"']:
                     return match.group(0)
                 
-            # Check for "hl2_d1_town_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_town_01.ent" and original in ['"models/props_vehicles/car004a_physics.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_town_01.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_vehicles/car004a_physics.mdl"']:
-                    return match.group(0)
-                
-            # Check for "hl2_d1_town_02.ent"
-            if os.path.basename(file_path).lower() == "hl2_d1_town_02.ent" and original in ['"models/props_wasteland/tram_lever01.mdl"', '"models/props_c17/pulleywheels_small01.mdl"', '"models/props_c17/pulleywheels_large01.mdl"', '"models/props_wasteland/tram_bracket01.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d1_town_02.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_wasteland/tram_lever01.mdl"', '"models/props_c17/pulleywheels_small01.mdl"', '"models/props_c17/pulleywheels_large01.mdl"', '"models/props_wasteland/tram_bracket01.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d2_coast_03.ent"
-            if os.path.basename(file_path).lower() == "hl2_d2_coast_03.ent" and original in ['"models/props_wasteland/barricade002a.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d2_coast_03.ent' to prevent crashing issue.")
-                while original in ['"models/props_wasteland/barricade002a.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d2_coast_11.ent"
-            if os.path.basename(file_path).lower() == "hl2_d2_coast_11.ent" and original in ['"models/props_borealis/borealis_door001a.mdl"', '"models/props_wasteland/exterior_fence003b.mdl"', '"models/props_foliage/driftwood_01a.mdl"', '"models/props_debris/rebar_cluster001b.mdl"', '"models/props_junk/wood_pallet001a.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d2_coast_11.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_borealis/borealis_door001a.mdl"', '"models/props_wasteland/exterior_fence003b.mdl"', '"models/props_foliage/driftwood_01a.mdl"', '"models/props_debris/rebar_cluster001b.mdl"', '"models/props_junk/wood_pallet001a.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d2_prison_05.ent"
-            if os.path.basename(file_path).lower() == "hl2_d2_prison_05.ent" and original in ['"models/props_c17/oildrum001.mdl"', '"models/props_junk/wood_crate001a_damaged.mdl"', '"models/props_junk/cardboard_box002a.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d2_prison_05.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/oildrum001.mdl"', '"models/props_junk/wood_crate001a_damaged.mdl"', '"models/props_junk/cardboard_box002a.mdl"']:
-                    return match.group(0)
-                
-            # Check for "hl2_d2_prison_07.ent"
-            if os.path.basename(file_path).lower() == "hl2_d2_prison_07.ent" and original in ['"models/props_borealis/bluebarrel001.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d2_prison_07.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_borealis/bluebarrel001.mdl"']:
-                    return match.group(0)
-                
-            # Check for "hl2_d3_c17_08.ent"
-            if os.path.basename(file_path).lower() == "hl2_d3_c17_08.ent" and original in ['"models/props_c17/oildrum001.mdl"', '"models/props_c17/oildrum001_explosive.mdl"', '"models/props_c17/handrail04_long.mdl"', '"models/props_c17/handrail04_brokenlong.mdl"', '"models/props_c17/utilityconnecter005.mdl"']:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d3_c17_08.ent' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_c17/oildrum001.mdl"', '"models/props_c17/oildrum001_explosive.mdl"', '"models/props_c17/handrail04_long.mdl"', '"models/props_c17/handrail04_brokenlong.mdl"', '"models/props_c17/utilityconnecter005.mdl"']:
-                    return match.group(0)
-
-            # Check for "hl2_d3_breen_01.ent"
-            if os.path.basename(file_path).lower() == "hl2_d3_breen_01.ent" and prompt == "props":
-                log_print(f"Skipping prop randomization in 'hl2_d3_breen_01.ent' because it causes progression issues.")
+            # Check for "ep1_ep1_c17_02b.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_02b.ent" and prompt == "props":
+                log_print(f"Skipping prop randomization in 'ep1_ep1_c17_02b.ent' because it causes progression issues.")
                 return match.group(0)
-                
-            # Check for "hl2_d3_c17_06a.ent"
-            concrete_models = read_concrete_models()
-            if os.path.basename(file_path).lower() == "hl2_d3_c17_06a.ent" and original in concrete_models:
-                log_print(f"Skipping randomization for '{original}' in 'hl2_d3_c17_06a.ent' because randomizing these props cause potential progression issues.")
-                while original in concrete_models:
+            
+            # Check for "ep1_ep1_c17_02b.ent"
+            if os.path.basename(file_path) == "ep1_ep1_c17_02b.ent":
+                if replacement in ['"weapon_357"', '"weapon_alyxgun"', '"weapon_bugbait"', '"weapon_frag"', '"weapon_physcannon"', '"weapon_crowbar"', '"weapon_stunstick"', '"weapon_crossbow"', '"weapon_pistol"', '"weapon_rpg"']:
+                    log_print(f"Retrying randomization for '{original}' at {start}-{end} in '{os.path.basename(file_path)}' because these weapons prevent the combine soldiers from moving.")
+                    while replacement in ['"weapon_357"', '"weapon_alyxgun"', '"weapon_bugbait"', '"weapon_frag"', '"weapon_physcannon"', '"weapon_crowbar"', '"weapon_stunstick"', '"weapon_crossbow"', '"weapon_pistol"', '"weapon_rpg"']:
+                        replacement = random.choice(replacements[original]).strip()
+                        replacement_bytes = replacement.encode('utf-8').strip()
+
+            # Check for "ep1_ep1_c17_06.ent"
+            if os.path.basename(file_path).lower() == "ep1_ep1_c17_06.ent" and original in ['"models/props_trainstation/train_outro_porch01.mdl"']:
+                log_print(f"Skipping randomization for '{original}' in 'ep1_ep1_c17_06.ent' because randomizing these causes problems.")
+                while original in ['"models/props_trainstation/train_outro_porch01.mdl"']:
                     return match.group(0)
                     
             # Replace boards and vents with blank model
             if original in ['"models/props_debris/wood_board01a.mdl"', '"models/props_debris/wood_board02a.mdl"', '"models/props_debris/wood_board03a.mdl"', '"models/props_debris/wood_board04a.mdl"', '"models/props_debris/wood_board05a.mdl"', '"models/props_debris/wood_board06a.mdl"', '"models/props_debris/wood_board07a.mdl"', '"models/props_junk/vent001.mdl"']:
-                if os.path.basename(file_path).lower() == "hl2_d1_canals_03.ent":
-                    log_print(f"Skipping randomization for '{original}' in hl2_d1_canals_03.ent because randomizing these props cause potential progression issues.")
+                if os.path.basename(file_path).lower() in ["ep1_ep1_c17_00.ent", "ep1_ep1_c17_00a.ent", "ep1_ep1_c17_01.ent", "ep1_ep1_c17_02.ent", "ep1_ep1_c17_02b.ent"]:
+                    log_print(f"Skipping randomization for '{original}' in {os.path.basename(file_path)} because randomizing these props cause potential progression issues.")
                     return match.group(0)
                 else:
                     log_print(f"Replacing '{original}' with blank model in {file_path} to prevent progression issues")
                     return match.group(0).replace(original.encode('utf-8'), b'"models/error.mdl"')
 
-            # Check for cranes and locks
-            if original in ['"models/props_wasteland/cranemagnet01a.mdl"', '"models/props_wasteland/prison_padlock001a.mdl"']:
+            # Check for locks
+            if original in ['"models/props_wasteland/prison_padlock001a.mdl"']:
                 log_print(f"Skipping randomization for '{original}' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_wasteland/cranemagnet01a.mdl"', '"models/props_wasteland/prison_padlock001a.mdl"']:
+                while original in ['"models/props_wasteland/prison_padlock001a.mdl"']:
+                    return match.group(0)
+                
+            # Check for physcannon
+            if original in ['"weapon_physcannon"']:
+                log_print(f"Skipping randomization for '{original}' because it's the gravity gun and it's EP1.")
+                while original in ['"weapon_physcannon"']:
                     return match.group(0)
                 
             # Check for elevator stuff
-            if original in ['"models/props_lab/elevatordoor.mdl"', '"models/props_lab/freightelevator.mdl"', '"models/props_lab/freightelevatorbutton.mdl"']:
+            if original in ['"models/props_lab/elevatordoor.mdl"', '"models/props_lab/freightelevator.mdl"', '"models/props_lab/freightelevatorbutton.mdl"', '"models/props_c17/undergroundelevator.mdl"']:
                 log_print(f"Skipping randomization for '{original}' because randomizing these props cause potential progression issues.")
-                while original in ['"models/props_lab/elevatordoor.mdl"', '"models/props_lab/freightelevator.mdl"', '"models/props_lab/freightelevatorbutton.mdl"']:
+                while original in ['"models/props_lab/elevatordoor.mdl"', '"models/props_lab/freightelevator.mdl"', '"models/props_lab/freightelevatorbutton.mdl"', '"models/props_c17/undergroundelevator.mdl"']:
                     return match.group(0)
 
             # Check for teleporter stuff
@@ -415,7 +287,7 @@ def read_props_and_big_maps():
     # Read props and identify which ones are "big"
     big_props = set()
     regular_props = set()
-    with open("props.txt", 'r') as file:
+    with open("props_ep1.txt", 'r') as file:
         for line in file:
             prop = line.strip()
             if prop.endswith('*'):
@@ -424,12 +296,12 @@ def read_props_and_big_maps():
                 regular_props.add(f'"{prop}"')
     
     # Read big maps
-    big_maps = set(read_lines("big_maps.txt"))
+    big_maps = set(read_lines("big_maps_ep1.txt"))
     
     return regular_props, big_props, big_maps
 
 def get_replacements(file_name, file_path=None):
-    if file_name == "props.txt":
+    if file_name == "props_ep1.txt":
         regular_props, big_props, big_maps = read_props_and_big_maps()
         map_name = os.path.basename(file_path) if file_path else ""
         
@@ -467,7 +339,7 @@ def get_dynamic_resupply_replacements(allow_traps=False):
     replacements = items + weapons
     
     if allow_traps:
-        npcs = [f'"{line.strip()}"' for line in read_lines("npcs.txt")]
+        npcs = [f'"{line.strip()}"' for line in read_lines("npcs_ep1.txt")]
         replacements.extend(npcs)
     
     return replacements
@@ -570,17 +442,41 @@ def randomize_lights(file_path):
     with open(file_path, 'rb') as file:
         content = file.read()
     
-    # Pattern for "_light" fields
+    # Patterns for light fields
+    light_hdr_pattern = re.compile(b'"_lightHDR"\s+"([-0-9]+\s+[-0-9]+\s+[-0-9]+\s+[-0-9]+)"', re.IGNORECASE)
     light_pattern = re.compile(b'"_light"\s+"([0-9]+\s+[0-9]+\s+[0-9]+)\s+([0-9]+)"', re.IGNORECASE)
-    
-    def light_replacer(match):
+
+    def light_replacer(match, is_hdr=False):
         # Generate random RGB values (0-255) and intensity (0-1000)
         new_rgb = f"{random.randint(0, 255)} {random.randint(0, 255)} {random.randint(0, 255)}"
         new_intensity = str(random.randint(0, 1000))
-        log_print(f"Replacing light '{match.group(1).decode('utf-8')} {match.group(2).decode('utf-8')}' with '{new_rgb} {new_intensity}' in {file_path}")
-        return f'"_light" "{new_rgb} {new_intensity}"'.encode('utf-8')
+        if is_hdr:
+            log_print(f"Replacing lightHDR '{match.group(1).decode('utf-8')}' with '{new_rgb} {new_intensity}' in {file_path}")
+        else:
+            log_print(f"Replacing light '{match.group(1).decode('utf-8')} {match.group(2).decode('utf-8')}' with '{new_rgb} {new_intensity}' in {file_path}")
+        return f'"{"_lightHDR" if is_hdr else "_light"}" "{new_rgb} {new_intensity}"'.encode('utf-8')
 
-    content = light_pattern.sub(light_replacer, content)
+    pos = 0
+    while True:
+        hdr_match = light_hdr_pattern.search(content, pos)
+        if not hdr_match:
+            break
+        
+        if hdr_match.group(1) == b"-1 -1 -1 1":
+            # Search for _light between HDR position and next }
+            end_pos = content.find(b'}', hdr_match.end())
+            if end_pos == -1:
+                end_pos = len(content)
+            
+            light_match = light_pattern.search(content, hdr_match.end(), end_pos)
+            if light_match:
+                # Randomize the _light value
+                content = content[:light_match.start()] + light_replacer(light_match) + content[light_match.end():]
+        else:
+            # Randomize the HDR value
+            content = content[:hdr_match.start()] + light_replacer(hdr_match, True) + content[hdr_match.end():]
+        
+        pos = hdr_match.end()
 
     # Pattern for "color" fields
     color_pattern = re.compile(b'"color"\s+"([0-9]+\s+[0-9]+\s+[0-9]+)"', re.IGNORECASE)
@@ -626,55 +522,8 @@ def randomize_ammo_crates(file_path):
     with open(file_path, 'wb') as file:
         file.write(content)
 
-def remove_coast_11_blockers(file_path):
-    if os.path.basename(file_path).lower() != "hl2_d2_coast_11.ent":
-        return
-
-    with open(file_path, 'rb') as file:
-        content = file.read()
-
-    # These are the props/entities to remove from hl2_d2_coast_11.ent
-    entity_names = [
-        b'"gate_mover_blocker"', 
-        b'"gate_mover"', 
-        b'"camp_door_blocker"', 
-        b'"camp_door"', 
-        b'"antlion_cage_door"',
-        b'"models/props_borealis/borealis_door001a.mdl"',
-        b'"models/props_wasteland/exterior_fence003b.mdl"',
-        b'"models/props_foliage/driftwood_01a.mdl"',
-        b'"models/props_debris/rebar_cluster001b.mdl"',
-        b'"models/props_junk/wood_pallet001a.mdl"'
-    ]
-
-    for entity_name in entity_names:
-        while True:
-            pattern = re.compile(re.escape(entity_name))
-            match = pattern.search(content)
-            if not match:
-                break
-
-            pos = match.start()
-            start_brace = content.rfind(b'{', 0, pos)
-            if start_brace != -1:
-                end_brace = content.find(b'}', pos)
-                if end_brace != -1:
-                    prev_char = start_brace - 1
-                    while prev_char >= 0 and content[prev_char:prev_char+1] in [b'\n', b'\r', b' ', b'\t']:
-                        prev_char -= 1
-                    next_char = end_brace + 1
-                    while next_char < len(content) and content[next_char:next_char+1] in [b'\n', b'\r', b' ', b'\t']:
-                        next_char += 1
-
-                    # Remove the entire entity block
-                    content = content[:prev_char+1] + b'\n' + content[next_char:]
-                    log_print(f"Removed entity or prop block {entity_name.decode('utf-8')} from {file_path}")
-
-    with open(file_path, 'wb') as file:
-        file.write(content)
-
 def remove_boards_and_vents(file_path):
-    if os.path.basename(file_path).lower() == "hl2_d1_canals_03.ent":
+    if os.path.basename(file_path).lower() in ["ep1_ep1_c17_00.ent", "ep1_ep1_c17_00a.ent", "ep1_ep1_c17_01.ent", "ep1_ep1_c17_02b.ent", "ep1_ep1_c17_02.ent"]:
         return
 
     with open(file_path, 'rb') as file:
@@ -718,6 +567,73 @@ def remove_boards_and_vents(file_path):
     with open(file_path, 'wb') as file:
         file.write(content)
 
+def remove_timer_give_guard_health(file_path):
+    if os.path.basename(file_path).lower() != "ep1_ep1_c17_02.ent":
+        return
+
+    with open(file_path, 'rb') as file:
+        content = file.read()
+
+    entity_names = [
+        b'"timer_give_guard_health"'
+    ]
+
+    for entity_name in entity_names:
+        while True:
+            pattern = re.compile(re.escape(entity_name))
+            match = pattern.search(content)
+            if not match:
+                break
+
+            pos = match.start()
+            start_brace = content.rfind(b'{', 0, pos)
+            if start_brace != -1:
+                end_brace = content.find(b'}', pos)
+                if end_brace != -1:
+                    prev_char = start_brace - 1
+                    while prev_char >= 0 and content[prev_char:prev_char+1] in [b'\n', b'\r', b' ', b'\t']:
+                        prev_char -= 1
+                    next_char = end_brace + 1
+                    while next_char < len(content) and content[next_char:next_char+1] in [b'\n', b'\r', b' ', b'\t']:
+                        next_char += 1
+
+                    content = content[:prev_char+1] + b'\n' + content[next_char:]
+                    log_print(f"Removed timer_give_guard_health {entity_name.decode('utf-8')} from {file_path}")
+
+    with open(file_path, 'wb') as file:
+        file.write(content)
+
+def modify_barney_game_end(file_path):
+    if os.path.basename(file_path).lower() != "ep1_ep1_c17_06.ent":
+        return
+
+    with open(file_path, 'rb') as file:
+        content = file.read()
+
+    entity_name = b'"npc_barney"'
+    
+    pattern = re.compile(re.escape(entity_name))
+    for match in pattern.finditer(content):
+        pos = match.start()
+        start_brace = content.rfind(b'{', 0, pos)
+        if start_brace != -1:
+            end_brace = content.find(b'}', pos)
+            if end_brace != -1:
+                # Get entity block content
+                entity_block = content[start_brace:end_brace+1]
+                # Find GameEndAlly property
+                game_end_pattern = re.compile(b'"GameEndAlly"\s+"1"')
+                game_end_match = game_end_pattern.search(entity_block)
+                if game_end_match:
+                    # Replace "1" with "No"
+                    modified_block = entity_block[:game_end_match.start()] + b'"GameEndAlly" "No"' + entity_block[game_end_match.end():]
+                    # Replace in full content
+                    content = content[:start_brace] + modified_block + content[end_brace+1:]
+                    log_print(f'Modified GameEndAlly to "No" for npc_barney in {file_path}')
+
+    with open(file_path, 'wb') as file:
+        file.write(content)
+
 def main():
     print("Checking 'backup' directory...")
     if not os.path.exists("backup"):
@@ -757,16 +673,16 @@ def main():
     log_print(f"Using seed {GLOBAL_SEED}")
 
     prompts = [
-        ("npcs", "npcs.txt"),
+        ("npcs", "npcs_ep1.txt"),
         ("items", "items.txt"),
         ("weapons", "weapons.txt"),
-        ("props", "props.txt"),
-        ("skyboxes", "skyboxes.txt"),
-        ("decals", "decals.txt"),
+        ("props", "props_ep1.txt"),
+        ("skyboxes", "skyboxes_ep1.txt"),
+        ("decals", "decals_ep1.txt"),
         ("chargers", "chargers.txt"),
     ]
 
-    important_npcs = read_important_npcs("important_npcs.txt")
+    important_npcs = read_important_npcs("important_npcs_ep1.txt")
     npc_map_dict = read_npc_map_files()
 
     npc_model_dict = {
@@ -816,12 +732,13 @@ def main():
             "models/humans/group03m/male_06.mdl", "models/humans/group03m/male_07.mdl",
             "models/humans/group03m/male_08.mdl", "models/humans/group03m/male_09.mdl"
         ],
+        '"npc_clawscanner"': ["models/shield_scanner.mdl"],
         '"npc_combine_camera"': ["models/combine_camera/combine_camera.mdl"],
         '"npc_combine_s"': ["models/combine_soldier.mdl", "models/combine_soldier_prisonguard.mdl", "models/combine_super_soldier.mdl"],
         '"npc_combinedropship"': ["models/combine_dropship.mdl"],
         '"npc_combinegunship"': ["models/gunship.mdl"],
         '"npc_crow"': ["models/crow.mdl"],
-        '"npc_cscanner"': ["models/shield_scanner.mdl", "models/combine_scanner.mdl"],
+        '"npc_cscanner"': ["models/combine_scanner.mdl"],
         '"npc_dog"': ["models/dog.mdl"],
         '"npc_eli"': ["models/eli.mdl"],
         '"npc_fastzombie"': ["models/zombie/fast.mdl"],
@@ -850,7 +767,8 @@ def main():
         '"npc_turret_ground"': ["models/combine_turrets/ground_turret.mdl"],
         '"npc_vortigaunt"': ["models/vortigaunt.mdl"],
         '"npc_zombie"': ["models/zombie/classic.mdl"],
-        '"npc_zombie_torso"': ["models/zombie/classic_torso.mdl"]
+        '"npc_zombie_torso"': ["models/zombie/classic_torso.mdl"],
+        '"npc_zombine"': ["models/zombie/zombie_soldier.mdl"]
     }
 
     for prompt, txt_file in prompts:
@@ -863,8 +781,7 @@ def main():
         if response == 'y':
             # Get replacements without file path initially 
             replacements = get_replacements(txt_file)
-            check_next_line = (prompt == "weapons")
-            is_weapon = (prompt == "weapons")
+            crossbow_check = (prompt == "weapons")
 
             # Walk through files and apply replacements
             for root, _, files in os.walk('.'):
@@ -875,15 +792,15 @@ def main():
                         if prompt == "props":
                             replacements = get_replacements(txt_file, os.path.join(root, file))
                 
-                        randomize_file(os.path.join(root, file), replacements, check_next_line,
+                        randomize_file(os.path.join(root, file), replacements, crossbow_check,
                                     important_npcs if prompt == "npcs" else None,
                                     npc_map_dict if prompt == "npcs" else None, 
                                     npc_model_dict if prompt == "models" else None,
-                                    is_weapon,
                                     prompt)
+                        remove_timer_give_guard_health(os.path.join(root, file))
+                        modify_barney_game_end(os.path.join(root, file))
                         
                         if prompt == "weapons":
-                            remove_coast_11_blockers(os.path.join(root, file))
                             remove_boards_and_vents(os.path.join(root, file))
 
     while True:
@@ -925,21 +842,21 @@ def main():
     if response != 'none':
         if response == 'sounds':
             # Load sounds and music lists for filtering
-            sounds_list = [line.strip() for line in read_lines("sounds.txt")]
-            music_list = [line.strip() for line in read_lines("music.txt")]
+            sounds_list = [line.strip() for line in read_lines("sounds_ep1.txt")]
+            music_list = [line.strip() for line in read_lines("music_ep1.txt")]
             sounds_dict = {
                 'sounds': sounds_list,
-                'soundscapes': [line.strip() for line in read_lines("soundscapes.txt")]
+                'soundscapes': [line.strip() for line in read_lines("soundscapes_ep1.txt")]
             }
         elif response == 'music':
             # Only load music list
-            music_list = [line.strip() for line in read_lines("music.txt")]
+            music_list = [line.strip() for line in read_lines("music_ep1.txt")]
         else:  # both
             # Load combined sounds and music list
-            combined_list = [line.strip() for line in read_lines("sounds&music.txt")]
+            combined_list = [line.strip() for line in read_lines("sounds&music_ep1.txt")]
             sounds_dict = {
                 'sounds': combined_list,
-                'soundscapes': [line.strip() for line in read_lines("soundscapes.txt")]
+                'soundscapes': [line.strip() for line in read_lines("soundscapes_ep1.txt")]
             }
 
         for root, _, files in os.walk('.'):

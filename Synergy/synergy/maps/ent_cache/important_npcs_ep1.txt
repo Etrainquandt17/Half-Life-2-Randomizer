@@ -1,0 +1,6 @@
+npc_alyx
+npc_antlion
+npc_barney
+npc_dog
+npc_eli
+npc_kleiner

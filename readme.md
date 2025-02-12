@@ -121,4 +121,5 @@ I promise that I tested this a lot, I have played the game pretty much over 5 ti
 ### What do I do if the game updates?
 The main randomization options should be fine to use, however the ASM options in the additional randomization options may not be safe to use. If the game updates since you last use this randomizer please check this page to see if you should use the ASM options or not. Using the ASM options for a game update it's not made for can cause game crashes or cause the options to not work correctly.
 ## ASM Option Status
+Last Update: 2/11/2025, did not break ASM hacks.
 ASM options should be safe to use.
